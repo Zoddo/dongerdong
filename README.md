@@ -18,7 +18,7 @@ A simple IRC bot for fighting, written in Python.
 How to install
 ==============
 
- * Install pyfiglet, peewee, pydle and pure-sasl (via pip if you want)
+ * Install pyfiglet, peewee, pydle and pure-sasl (via `pip install -r requirements.txt` if you want)
  * Rename config.example to config.json and edit it
  * Run the bot (with Python 3)
  * ???
