@@ -529,7 +529,7 @@ class Donger(BaseClient):
             self.getTurn()
     
     def processAI(self):
-        myself = self.players[config['nick']]
+        myself = self.players[config['nick'].lower()]
         # 1 - We will always hit a player with LESS than 25 HP.
         for i in self.players:
             if i == config['nick'].lower():
@@ -544,8 +544,8 @@ class Donger(BaseClient):
             self.heal(config['nick'])
         else:
             players = self.turnlist[:]
-            players.remove(config['nick'].lower())
-            victim = {}
+            players.remove(config['nick'])
+            victim = None
             while not victim: # !!!
                 hitting = self.players[random.choice(players).lower()]
                 if hitting['hp'] > 0:
