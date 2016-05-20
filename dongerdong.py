@@ -376,7 +376,7 @@ class Donger(BaseClient):
         if self.deathmatch:
             self.akick(coward)
         
-        if self.turnlist[self.currentTurn].lower() == coward:
+        if self.turnlist[self.currentTurn] == coward:
             self.getTurn()
         else:
             aliveplayers = 0
