@@ -38,6 +38,8 @@ class Donger(BaseClient):
         
         self.channel = config['channel'] # Main fight channel
 
+        self.kicked = {} # Kicked from. {'#channel': 'kicker'}
+
         self.lastheardfrom = {} #lastheardfrom['Polsaker'] = time.time()
         
         timeout_checker = threading.Thread(target = self._timeout)
@@ -330,7 +332,11 @@ class Donger(BaseClient):
                 except:
                     raise
 
-    
+    def on_kick(self, channel, user, kicker, message=None):
+        if user.lower() == config['nick'].lower():
+            self.join(channel)
+            self.kicked[channel.lower()] = kicker
+
     def on_quit(self, user, message=None):
         if self.gameRunning:
             self.cowardQuit(user)
@@ -338,7 +344,17 @@ class Donger(BaseClient):
     def on_part(self, channel, user, message=None):
         if self.gameRunning and channel == self.channel:
             self.cowardQuit(user)
-    
+        elif user.lower() == config['nick'].lower() and message:
+            if message.startswith("requested by"):
+                kicker = message.split()[2]
+                self.join(channel)
+                self.kicked[channel.lower()] = kicker
+
+    def on_join(self, channel, user):
+        if user.lower() == config['nick'].lower() and channel.lower() in self.kicked:
+            self.kick(channel, self.kicked[channel.lower()], "FUCK YOU")
+            del(self.kicked[channel.lower()])
+
     #def on_nick(self, *args):
     #    print(args)
     
