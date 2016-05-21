@@ -317,7 +317,7 @@ class Donger(BaseClient):
                 self.message(target, "PM'd you my commands.")
                 self.message(source, "Commands available only in {0}:".format(self.channel))
                 self.message(source, "  !fight <nickname> [othernicknames]: Challenge another player")
-                self.message(source, "  !deathmatch <nickname>: Same as fight, but only 1v1, and loser is bant for 20 minutes.")
+                self.message(source, "  !deathmatch <nickname>: Same as fight, but only 1v1, and loser is banned for 20 minutes.")
                 self.message(source, "  !ascii <text>: Turns any text 13 characters or less into ascii art")
                 self.message(source, "  !cancel: Cancels a !fight")
                 self.message(source, "  !reject <nick>: Cowardly rejects a !fight")
@@ -640,7 +640,7 @@ class Donger(BaseClient):
             
         
         if deathmatch:
-            self.message(self.channel, "{0}: \002{1}\002 challenged you to a deathmatch. The loser will be bant for 20 minutes. To accept, use '!accept {1}'.".format(", ".join(players[1:]), players[0]))
+            self.message(self.channel, "{0}: \002{1}\002 challenged you to a deathmatch. The loser will be banned for 20 minutes. To accept, use '!accept {1}'.".format(", ".join(players[1:]), players[0]))
         else:
             self.message(self.channel, "{0}: \002{1}\002 challenged you. To accept, use '!accept {1}'.".format(", ".join(players[1:]), players[0]))
         
