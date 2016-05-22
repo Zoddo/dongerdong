@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8
-import pydle
-import json
-import logging
-import threading
-import random
-import time
-from pyfiglet import Figlet
-import copy
-import operator
-import peewee
-import importlib
-import subprocess
+try:
+    import os
+    import pydle
+    import json
+    import logging
+    import threading
+    import random
+    import time
+    import copy
+    import operator
+    import peewee
+    import importlib
+    import subprocess
+    from pyfiglet import Figlet
+except Exception as e: # oops!
+    print("There has been an error when including modules. It means that you haven't installed one of those. Please check and try again.")
+    print(e)
+    os._exit(1)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -138,9 +144,9 @@ class Donger(BaseClient):
                         if args[0].lower() not in self.players:
                             self.message(self.channel, "You should hit something that is actually playing...")
                             return
-                        if args[0].lower() == source.lower():
-                            self.message(self.channel, "Stop hitting yourself!")
-                            return
+                        #if args[0].lower() == source.lower(): # disabled because yolo
+                            #self.message(self.channel, "Stop hitting yourself!")
+                            #return
                         if self.players[args[0].lower()]['hp'] <= 0:
                             self.message(self.channel, "Do you REALLY want to hit a corpse?")
                             return
@@ -150,10 +156,13 @@ class Donger(BaseClient):
                     if source != self.turnlist[self.currentTurn]:
                         self.message(self.channel, "It's not your fucking turn!")
                         return
+                    if self.players[source][zombie]:
+                        self.message(self.channel, "You can't heal while being a zombie.")
+                        return
                     
                     self.heal(source)
                 elif command == "ascii" and not self.gameRunning:
-                    if args and len(' '.join(args)) < 16:
+                    if args and len(' '.join(args)) < 16 and "".join(args) != "":
                         self.message(target, self.ascii(' '.join(args)))
                     else:
                         self.message(target, "Text must be 15 characters or less (that was {0} characters). Syntax: !ascii Fuck You".format(len(' '.join(args))))
@@ -277,26 +286,32 @@ class Donger(BaseClient):
                 elif command == "version" and not self.gameRunning:
                     try:
                         ver = subprocess.check_output(["git", "describe"]).decode().strip()
-                        self.message(target, "I am running {} ({})".format(ver,'http://bit.ly/1pG2Hay'))
+                        self.message(target, "I am running {} (http://bit.ly/1pG2Hay)".format(ver))
                     except:
-                        self.message(target, "I have no idea.")
+                        self.message(target, "I have no idea. Blame the one downloaded me. http://bit.ly/1pG2Hay")
 
             elif target == config['nick']: # private message
                 if command == "join" and self.gameRunning and not self.deathmatch:
-                    if source in self.turnlist:
+                    if source in self.turnlist and self.turnlist[source]["zombie"]:
                         self.notice(source, "You already played in this game.")
                         return
+                    if not self.turnlist[source]["zombie"]:
+                        zombie = True
                     
                     if self.versusone:
                         self.notice(source, "You can't join this fight")
                         return
                     
                     alivePlayers = [self.players[player]['hp'] for player in self.players if self.players[player]['hp'] > 0]
+                    zombye = ""
                     health = int(sum(alivePlayers) / len(alivePlayers))
+                    if zombie:
+                        health = health / 2 + 5
+                        zombye = "'S ZOMBIE"
                     self.countStat(source, "joins")
                     self.turnlist.append(source)
-                    self.players[source.lower()] = {'hp': health, 'heals': 4, 'zombie': False, 'nick': source, 'praised': False}
-                    self.message(self.channel, "\002{0}\002 JOINS THE FIGHT (\002{1}\002HP)".format(source.upper(), health))
+                    self.players[source.lower()] = {'hp': health, 'heals': 4, 'zombie': zombie, 'nick': source, 'praised': False}
+                    self.message(self.channel, "\002{0}{1}\002 JOINS THE FIGHT (\002{1}\002HP)".format(source.upper(), health), zombye)
                     self.set_mode(self.channel, "+v", source)
 
             #Rate limiting
@@ -560,7 +575,9 @@ class Donger(BaseClient):
         self.set_mode(self.channel, "-mv", winner)
         
         if len(self.turnlist) > 2 and realwin:
-            self.message(self.channel, "{0} REKT {1}".format(self.players[winner]['nick'], ", ".join(losers)).upper())
+            loosers = " ".join(losers).replace(" {0}".format([len(losers)-1]), "").split(" ")
+            loser = losers[len(losers)-1]
+            self.message(self.channel, "{0} REKT {1} AND {2}!".format(self.players[winner]['nick'], ", ".join(loosers)).upper(), loser.upper())
         #Realwin is only ever false if there's a coward quit.
         if realwin:
             if losers != [config['nick']]:
@@ -660,7 +677,6 @@ class Donger(BaseClient):
                 self.set_mode(self.channel, "-v", self.turnlist[self.currentTurn])
                 self.players[self.turnlist[self.currentTurn].lower()]['hp'] = -1
                 self.countStat(self.turnlist[self.currentTurn], "idleouts")
-
                 self.getTurn()
 
     
@@ -690,7 +706,7 @@ class Donger(BaseClient):
     def import_extcmds(self):
         self.cmdhelp = {}
         try:
-            self.extcmds = config['extendedcommands']
+            self.extcmds = config['extcmds']
         except KeyError:
             self.extcmds = []
             logging.warning("No extended commands found in config.json")
@@ -749,14 +765,15 @@ except:
     pass
 
         
-client = Donger(config['nick'], sasl_username=config['nickserv_username'],
-                sasl_password=config['nickserv_password'])
+client = Donger(config['nick'], sasl_username=config['nsuser'],
+                sasl_password=config['nspass'])
 client.connect(config['server'], config['port'], tls=config['tls'])
 try:
     client.handle_forever()
 except KeyboardInterrupt:
     if client.connected:
         try:
+            client.message(client.channel, importlib.import_module('extcmd.excuse').doit())
             client.quit(importlib.import_module('extcmd.excuse').doit())
         except:
             client.quit('BRB NAPPING')

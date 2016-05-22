@@ -1,12 +1,12 @@
 {
-    "server": "irc.freenode.net",
+    "server": "chat.freenode.net",
     "nick": "botnick",
     "channel": "#fightchannel",
     "port": 6697,
     "tls": true,
-    "nickserv_username": "dong",
-    "nickserv_password": "yourpasswd",
+    "nsuser": "dong",
+    "nspass": "yourpasswd",
     "auxchans": [],
-    "extendedcommands": ["jaden","excuse","dong"],
+    "extcmds": ["jaden","excuse","dong"],
     "topmodifier": 0.05
 }
