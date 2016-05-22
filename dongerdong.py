@@ -301,10 +301,14 @@ class Donger(BaseClient):
 
             elif target == config['nick']: # private message
                 if command == "join" and self.gameRunning and not self.deathmatch:
-                    if source in self.turnlist and self.players[source]['zombie']:
+                    try:
+                        sombie = self.players[source]['zombie']
+                    except:
+                        sombie = False
+                    if source in self.turnlist and sombie:
                         self.notice(source, "You already played in this game.")
                         return
-                    if not self.players[source]['zombie']:
+                    if not sombie and not source in self.turnlist:
                         zombie = True
                     
                     if self.versusone:
@@ -586,7 +590,7 @@ class Donger(BaseClient):
         if len(self.turnlist) > 2 and realwin:
             loosers = " ".join(losers).replace(" {0}".format([len(losers)-1]), "").split(" ")
             loser = losers[len(losers)-1]
-            self.message(self.channel, "{0} REKT {1} AND {2}!".format(self.players[winner]['nick'], ", ".join(loosers)).upper(), loser.upper())
+            self.message(self.channel, "{0} REKT {1} AND {2}!".format(self.players[winner]['nick'], ", ".join(loosers).upper(), loser.upper()))
         #Realwin is only ever false if there's a coward quit.
         if realwin:
             if losers != [config['nick']]:
