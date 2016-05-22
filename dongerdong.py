@@ -165,7 +165,7 @@ class Donger(BaseClient):
                     if source != self.turnlist[self.currentTurn]:
                         self.message(self.channel, "It's not your fucking turn!")
                         return
-                    if self.players[source]['zombie']:
+                    if self.players[source.lower()]['zombie']:
                         self.message(self.channel, "You can't heal while being a zombie.")
                         return
                     
@@ -302,14 +302,14 @@ class Donger(BaseClient):
             elif target == config['nick']: # private message
                 if command == "join" and self.gameRunning and not self.deathmatch:
                     try:
-                        sombie = self.players[source]['zombie']
+                        sombie = self.players[source.lower()]['zombie']
                     except:
                         sombie = False
                     if source in self.turnlist and sombie:
                         self.notice(source, "You already played in this game.")
                         return
                     try:
-                        hp = self.players[source]['hp']
+                        hp = self.players[source.lower()]['hp']
                     except:
                         hp = 0
                     if hp > 0:
