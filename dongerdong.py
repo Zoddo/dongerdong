@@ -165,12 +165,9 @@ class Donger(BaseClient):
                     if source != self.turnlist[self.currentTurn]:
                         self.message(self.channel, "It's not your fucking turn!")
                         return
-                    try:
-                        if self.players[source]['zombie']:
-                            self.message(self.channel, "You can't heal while being a zombie.")
-                            return
-                    except:
-                        pass
+                    if self.players[source]['zombie']:
+                        self.message(self.channel, "You can't heal while being a zombie.")
+                        return
                     
                     self.heal(source)
                 elif command == "ascii" and not self.gameRunning:
@@ -311,8 +308,17 @@ class Donger(BaseClient):
                     if source in self.turnlist and sombie:
                         self.notice(source, "You already played in this game.")
                         return
+                    try:
+                        hp = self.players[source]['hp']
+                    except:
+                        hp = 0
+                    if hp > 0:
+                        self.notice(source, "You're already playing!")
+                        return
                     if not sombie and source in self.turnlist:
                         zombie = True
+                    else:
+                        zombie = False
                     
                     if self.versusone:
                         self.notice(source, "You can't join this fight")
