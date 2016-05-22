@@ -138,8 +138,11 @@ class Donger(BaseClient):
                         return
                     
                     if not args: # pick a random living thing
-                        livingThings = [self.players[player]['nick'] for player in self.players if self.players[player]['hp'] > 0 and player != source.lower()]
-                        self.hit(source, random.choice(livingThings))
+                        livingThings = [self.players[player]['nick'] for player in self.players if self.players[player]['hp'] > 0]
+                        livingThing = random.choice(livingThings)
+                        if livingThing == source:
+                            self.ascii("WHOOPS")
+                        self.hit(source, livingThing)
                     else: # The user picked a thing. Check if it is alive
                         if args[0].lower() not in self.players:
                             self.message(self.channel, "You should hit something that is actually playing...")
@@ -151,12 +154,18 @@ class Donger(BaseClient):
                             self.message(self.channel, "Do you REALLY want to hit a corpse?")
                             return
                         
+                        hitme = random.randint(1, 9001)
+                        if hitme > 8900:
+                            self.ascii("WHOOPS")
+                            self.hit(source, source)
+                            return
+                        
                         self.hit(source, self.players[args[0].lower()]['nick'])
                 elif command == "heal" and self.gameRunning:
                     if source != self.turnlist[self.currentTurn]:
                         self.message(self.channel, "It's not your fucking turn!")
                         return
-                    if self.players[source][zombie]:
+                    if self.players[source]['zombie']:
                         self.message(self.channel, "You can't heal while being a zombie.")
                         return
                     
@@ -292,10 +301,10 @@ class Donger(BaseClient):
 
             elif target == config['nick']: # private message
                 if command == "join" and self.gameRunning and not self.deathmatch:
-                    if source in self.turnlist and self.turnlist[source]["zombie"]:
+                    if source in self.turnlist and self.players[source]['zombie']:
                         self.notice(source, "You already played in this game.")
                         return
-                    if not self.turnlist[source]["zombie"]:
+                    if not self.players[source]['zombie']:
                         zombie = True
                     
                     if self.versusone:
@@ -306,12 +315,12 @@ class Donger(BaseClient):
                     zombye = ""
                     health = int(sum(alivePlayers) / len(alivePlayers))
                     if zombie:
-                        health = health / 2 + 5
+                        health = health / 2 + random.randint(5, 25)
                         zombye = "'S ZOMBIE"
                     self.countStat(source, "joins")
                     self.turnlist.append(source)
                     self.players[source.lower()] = {'hp': health, 'heals': 4, 'zombie': zombie, 'nick': source, 'praised': False}
-                    self.message(self.channel, "\002{0}{1}\002 JOINS THE FIGHT (\002{1}\002HP)".format(source.upper(), health), zombye)
+                    self.message(self.channel, "\002{0}{1}\002 JOINS THE FIGHT (\002{2}\002HP)".format(source.upper(), zombye, health))
                     self.set_mode(self.channel, "+v", source)
 
             #Rate limiting
