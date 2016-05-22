@@ -165,9 +165,12 @@ class Donger(BaseClient):
                     if source != self.turnlist[self.currentTurn]:
                         self.message(self.channel, "It's not your fucking turn!")
                         return
-                    if self.players[source]['zombie']:
-                        self.message(self.channel, "You can't heal while being a zombie.")
-                        return
+                    try:
+                        if self.players[source]['zombie']:
+                            self.message(self.channel, "You can't heal while being a zombie.")
+                            return
+                    except:
+                        pass
                     
                     self.heal(source)
                 elif command == "ascii" and not self.gameRunning:
@@ -308,7 +311,7 @@ class Donger(BaseClient):
                     if source in self.turnlist and sombie:
                         self.notice(source, "You already played in this game.")
                         return
-                    if not sombie and not source in self.turnlist:
+                    if not sombie and source in self.turnlist:
                         zombie = True
                     
                     if self.versusone:
@@ -319,7 +322,6 @@ class Donger(BaseClient):
                     zombye = ""
                     health = int(sum(alivePlayers) / len(alivePlayers))
                     if zombie:
-                        health = health / 2 + random.randint(5, 25)
                         zombye = "'S ZOMBIE"
                     self.countStat(source, "joins")
                     self.turnlist.append(source)
@@ -588,9 +590,9 @@ class Donger(BaseClient):
         self.set_mode(self.channel, "-mv", winner)
         
         if len(self.turnlist) > 2 and realwin:
-            loosers = " ".join(losers).replace(" {0}".format([len(losers)-1]), "").split(" ")
-            loser = losers[len(losers)-1]
-            self.message(self.channel, "{0} REKT {1} AND {2}!".format(self.players[winner]['nick'], ", ".join(loosers).upper(), loser.upper()))
+            loser = losers[len(losers)-1].upper()
+            loosers = ", ".join(losers).upper().replace(", {0}".format(loser), "")
+            self.message(self.channel, "{0} REKT {1} AND {2}!".format(self.players[winner]['nick'], loosers, loser))
         #Realwin is only ever false if there's a coward quit.
         if realwin:
             if losers != [config['nick']]:
