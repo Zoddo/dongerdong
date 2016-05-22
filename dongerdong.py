@@ -457,11 +457,11 @@ class Donger(BaseClient):
         self.countStat(victim, "losses")
         self.countStat(slayer, "kills")
         
-        if self.deathmatch:
-            self.akick(victim)
-        
         if victim != config['nick']:
             self.kick(self.channel, victim, "REKT")
+        
+        if self.deathmatch:
+            self.akick(victim)
     
     def start(self, pendingFight):
         self.gameRunning = True
