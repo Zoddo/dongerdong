@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8
-import pydle
-import json
-import logging
-import threading
-import random
-import time
-from pyfiglet import Figlet
-import copy
-import operator
-import peewee
-import importlib
-import subprocess
+try:
+    import os
+    import pydle
+    import json
+    import logging
+    import threading
+    import random
+    import time
+    import copy
+    import operator
+    import peewee
+    import importlib
+    import subprocess
+    from pyfiglet import Figlet
+except Exception as e: # oops!
+    print("There has been an error when including modules. It means that you haven't installed one of those. Please check and try again.")
+    print(e)
+    os._exit(1)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -132,17 +138,26 @@ class Donger(BaseClient):
                         return
                     
                     if not args: # pick a random living thing
-                        livingThings = [self.players[player]['nick'] for player in self.players if self.players[player]['hp'] > 0 and player != source.lower()]
-                        self.hit(source, random.choice(livingThings))
+                        livingThings = [self.players[player]['nick'] for player in self.players if self.players[player]['hp'] > 0]
+                        livingThing = random.choice(livingThings)
+                        if livingThing == source:
+                            self.ascii("WHOOPS")
+                        self.hit(source, livingThing)
                     else: # The user picked a thing. Check if it is alive
                         if args[0].lower() not in self.players:
                             self.message(self.channel, "Vous devez frapper quelqu'un qui est en train de jouer ...")
                             return
-                        if args[0].lower() == source.lower():
-                            self.message(self.channel, "Arrêtez de vous frapper !")
-                            return
+                        #if args[0].lower() == source.lower(): # disabled because yolo
+                            #self.message(self.channel, "Arrêtez de vous frapper !")
+                            #return
                         if self.players[args[0].lower()]['hp'] <= 0:
                             self.message(self.channel, "Voulez-vous VRAIMENT frapper un cadavre ?")
+                            return
+                        
+                        hitme = random.randint(1, 9001)
+                        if hitme > 8900:
+                            self.ascii("WHOOPS")
+                            self.hit(source, source)
                             return
                         
                         self.hit(source, self.players[args[0].lower()]['nick'])
@@ -150,10 +165,13 @@ class Donger(BaseClient):
                     if source != self.turnlist[self.currentTurn]:
                         self.message(self.channel, "Ce n'est pas votre de tour !")
                         return
+                    if self.players[source.lower()]['zombie']:
+                        self.message(self.channel, "You can't heal while being a zombie.")
+                        return
                     
                     self.heal(source)
                 elif command == "ascii" and not self.gameRunning:
-                    if args and len(' '.join(args)) < 16:
+                    if args and len(' '.join(args)) < 16 and "".join(args) != "":
                         self.message(target, self.ascii(' '.join(args)))
                     else:
                         self.message(target, "Le texte doit faire au plus 15 caractères (il y a {0} caractères). Syntaxe: !ascii Fuck You".format(len(' '.join(args))))
@@ -277,26 +295,44 @@ class Donger(BaseClient):
                 elif command == "version" and not self.gameRunning:
                     try:
                         ver = subprocess.check_output(["git", "describe", "--tags"]).decode().strip()
-                        self.message(target, "I am running {} ({})".format(ver,'http://bit.ly/22kjRJb'))
+                        self.message(target, "I am running {} (http://bit.ly/22kjRJb)".format(ver))
                     except:
-                        self.message(target, "I have no idea.")
+                        self.message(target, "I have no idea. Blame the one downloaded me. http://bit.ly/22kjRJb")
 
             elif target == config['nick']: # private message
                 if command == "join" and self.gameRunning and not self.deathmatch:
-                    if source in self.turnlist:
+                    try:
+                        sombie = self.players[source.lower()]['zombie']
+                    except:
+                        sombie = False
+                    if source in self.turnlist and sombie:
                         self.notice(source, "Vous jouez déjà dans le jeu.")
                         return
+                    try:
+                        hp = self.players[source.lower()]['hp']
+                    except:
+                        hp = 0
+                    if hp > 0:
+                        self.notice(source, "You're already playing!")
+                        return
+                    if not sombie and source in self.turnlist:
+                        zombie = True
+                    else:
+                        zombie = False
                     
                     if self.versusone:
                         self.notice(source, "Vous ne pouvez pas joindre ce combat.")
                         return
                     
                     alivePlayers = [self.players[player]['hp'] for player in self.players if self.players[player]['hp'] > 0]
+                    zombye = ""
                     health = int(sum(alivePlayers) / len(alivePlayers))
+                    if zombie:
+                        zombye = "'S ZOMBIE"
                     self.countStat(source, "joins")
                     self.turnlist.append(source)
-                    self.players[source.lower()] = {'hp': health, 'heals': 4, 'zombie': False, 'nick': source, 'praised': False}
-                    self.message(self.channel, "\002{0}\002 REJOINT LE COMBAT (\002{1}\002HP)".format(source.upper(), health))
+                    self.players[source.lower()] = {'hp': health, 'heals': 4, 'zombie': zombie, 'nick': source, 'praised': False}
+                    self.message(self.channel, "\002{0}{1}\002 REJOINT LE COMBAT (\002{2}\002HP)".format(source.upper(), zombye, health))
                     self.set_mode(self.channel, "+v", source)
 
             #Rate limiting
@@ -563,7 +599,9 @@ class Donger(BaseClient):
         self.set_mode(self.channel, "-mv", winner)
         
         if len(self.turnlist) > 2 and realwin:
-            self.message(self.channel, "{0} REKT {1}".format(self.players[winner]['nick'], ", ".join(losers)).upper())
+            loser = losers[len(losers)-1].upper()
+            loosers = ", ".join(losers).upper().replace(", {0}".format(loser), "")
+            self.message(self.channel, "{0} REKT {1} AND {2}!".format(self.players[winner]['nick'], loosers, loser))
         #Realwin is only ever false if there's a coward quit.
         if realwin:
             if losers != [config['nick']]:
@@ -663,7 +701,6 @@ class Donger(BaseClient):
                 self.set_mode(self.channel, "-v", self.turnlist[self.currentTurn])
                 self.players[self.turnlist[self.currentTurn].lower()]['hp'] = -1
                 self.countStat(self.turnlist[self.currentTurn], "idleouts")
-
                 self.getTurn()
 
     
@@ -693,7 +730,7 @@ class Donger(BaseClient):
     def import_extcmds(self):
         self.cmdhelp = {}
         try:
-            self.extcmds = config['extendedcommands']
+            self.extcmds = config['extcmds']
         except KeyError:
             self.extcmds = []
             logging.warning("No extended commands found in config.json")
@@ -752,14 +789,15 @@ except:
     pass
 
         
-client = Donger(config['nick'], sasl_username=config['nickserv_username'],
-                sasl_password=config['nickserv_password'])
+client = Donger(config['nick'], sasl_username=config['nsuser'],
+                sasl_password=config['nspass'])
 client.connect(config['server'], config['port'], tls=config['tls'])
 try:
     client.handle_forever()
 except KeyboardInterrupt:
     if client.connected:
         try:
+            client.message(client.channel, importlib.import_module('extcmd.excuse').doit())
             client.quit(importlib.import_module('extcmd.excuse').doit())
         except:
             client.quit('BRB NAPPING')
